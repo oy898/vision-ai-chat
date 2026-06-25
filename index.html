@@ -1,0 +1,1115 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#000000" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Vision AI" />
+  <title>Vision AI</title>
+  <style>
+    /* ============================================
+       鍏ㄥ眬鏍峰紡
+       ============================================ */
+    :root {
+      --primary: #007AFF;
+      --bg: #000;
+      --surface: #1a1a1a;
+      --surface2: #2a2a2a;
+      --text: #fff;
+      --text-dim: #888;
+      --danger: #ff3b30;
+      --success: #34C759;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ============================================
+       鍚姩椤?       ============================================ */
+    #splash {
+      position: fixed;
+      inset: 0;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 999;
+      transition: opacity 0.6s ease;
+    }
+
+    #splash.fade-out {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .splash-content {
+      text-align: center;
+      animation: slideUp 0.8s ease-out;
+    }
+
+    .splash-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: breathe 2.5s infinite ease-in-out;
+    }
+
+    .splash-content h1 {
+      font-size: 38px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #fff 0%, var(--primary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .splash-content p {
+      color: var(--text-dim);
+      font-size: 16px;
+      margin-bottom: 40px;
+    }
+
+    .splash-dots {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+    }
+
+    .splash-dots span {
+      width: 10px;
+      height: 10px;
+      background: var(--primary);
+      border-radius: 50%;
+      animation: dotPulse 1.4s infinite ease-in-out both;
+    }
+
+    .splash-dots span:nth-child(1) { animation-delay: 0s; }
+    .splash-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .splash-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    /* ============================================
+       涓荤晫闈?       ============================================ */
+    #app {
+      display: none;
+      flex-direction: column;
+      height: 100dvh;
+    }
+
+    #app.active {
+      display: flex;
+    }
+
+    /* ============================================
+       鎽勫儚澶村尯鍩?       ============================================ */
+    .camera-wrap {
+      position: relative;
+      flex: 1;
+      min-height: 45vh;
+      background: #111;
+      overflow: hidden;
+    }
+
+    #video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    #canvas {
+      display: none;
+    }
+
+    .camera-header {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 16px;
+      padding-top: max(16px, env(safe-area-inset-top));
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, transparent 100%);
+    }
+
+    .top-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      border-radius: 50%;
+      font-size: 18px;
+      cursor: pointer;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .top-btn:active {
+      transform: scale(0.9);
+      background: rgba(0,0,0,0.7);
+    }
+
+    .cam-status {
+      font-size: 12px;
+      padding: 6px 14px;
+      background: rgba(0,0,0,0.5);
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      color: #fff;
+      user-select: none;
+    }
+
+    .cam-status.live {
+      background: rgba(52,199,89,0.75);
+    }
+
+    .cam-status.error {
+      background: rgba(255,59,48,0.75);
+    }
+
+    .camera-hint {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 13px;
+      padding: 8px 20px;
+      background: rgba(0,0,0,0.6);
+      border-radius: 20px;
+      color: rgba(255,255,255,0.9);
+      white-space: nowrap;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      user-select: none;
+    }
+
+    /* ============================================
+       瀵硅瘽鍖哄煙
+       ============================================ */
+    .chat-area {
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      max-height: 55vh;
+      background: var(--surface);
+      border-radius: 20px 20px 0 0;
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.4);
+    }
+
+    .chat-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 20px 10px;
+      font-size: 14px;
+      font-weight: 600;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .clear-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      font-size: 13px;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+
+    .clear-btn:active {
+      color: var(--danger);
+    }
+
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .messages::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .messages::-webkit-scrollbar-thumb {
+      background: #444;
+      border-radius: 2px;
+    }
+
+    .message {
+      max-width: 85%;
+      padding: 11px 15px;
+      border-radius: 18px;
+      line-height: 1.55;
+      font-size: 15px;
+      word-break: break-word;
+      animation: msgIn 0.25s ease-out;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: var(--primary);
+      border-bottom-right-radius: 5px;
+    }
+
+    .message.ai {
+      align-self: flex-start;
+      background: var(--surface2);
+      border-bottom-left-radius: 5px;
+    }
+
+    .message.system {
+      align-self: center;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-dim);
+      font-size: 12px;
+      text-align: center;
+      padding: 8px 16px;
+    }
+
+    .message.error {
+      background: rgba(255,59,48,0.15);
+      color: #ff8080;
+      font-size: 13px;
+    }
+
+    .thinking {
+      align-self: flex-start;
+      background: var(--surface2);
+      padding: 13px 18px;
+      border-radius: 18px;
+      border-bottom-left-radius: 5px;
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .thinking span {
+      width: 7px;
+      height: 7px;
+      background: #666;
+      border-radius: 50%;
+      animation: dotBounce 1.4s infinite ease-in-out both;
+    }
+
+    .thinking span:nth-child(1) { animation-delay: 0s; }
+    .thinking span:nth-child(2) { animation-delay: 0.2s; }
+    .thinking span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes dotBounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+    }
+
+    /* ============================================
+       杈撳叆鍖哄煙
+       ============================================ */
+    .input-bar {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      padding-bottom: max(10px, env(safe-area-inset-bottom));
+      background: var(--surface);
+      border-top: 1px solid rgba(255,255,255,0.06);
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    #questionInput {
+      flex: 1;
+      padding: 12px 16px;
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 24px;
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #questionInput:focus {
+      border-color: var(--primary);
+    }
+
+    #questionInput::placeholder {
+      color: var(--text-dim);
+      font-size: 15px;
+    }
+
+    .icon-btn {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 50%;
+      font-size: 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.15s, background 0.15s;
+    }
+
+    .icon-btn:active {
+      transform: scale(0.9);
+    }
+
+    .send-btn {
+      background: var(--primary);
+      color: #fff;
+    }
+
+    .mic-btn {
+      background: var(--surface2);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .mic-btn.recording {
+      background: var(--danger);
+      animation: micPulse 1s infinite;
+    }
+
+    @keyframes micPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    /* ============================================
+       璁剧疆椤甸潰锛堟ā鎬侊級
+       ============================================ */
+    #settingsPage {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      z-index: 500;
+      visibility: hidden;
+      opacity: 0;
+      display: flex;
+      flex-direction: column;
+      transform: translateY(100%);
+      transition: transform 0.35s cubic-bezier(0.32, 0.72, 0, 1),
+                  opacity 0.35s ease,
+                  visibility 0.35s;
+    }
+
+    #settingsPage.show {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 18px 20px;
+      padding-top: max(18px, env(safe-area-inset-top));
+      background: var(--surface);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+
+    .settings-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+      flex: 1;
+    }
+
+    .settings-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .field label {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .field small {
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    .field small a {
+      color: var(--primary);
+      text-decoration: none;
+    }
+
+    .field input,
+    .field select {
+      padding: 14px 16px;
+      background: var(--surface);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      color: var(--text);
+      font-size: 16px;
+      outline: none;
+      width: 100%;
+    }
+
+    .field input:focus,
+    .field select:focus {
+      border-color: var(--primary);
+    }
+
+    .save-btn {
+      padding: 16px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 14px;
+      font-size: 17px;
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      margin-top: 8px;
+    }
+
+    .save-btn:active {
+      opacity: 0.85;
+    }
+
+    .save-btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .hidden { display: none !important; }
+
+    .model-tabs {
+      display: flex;
+      gap: 10px;
+    }
+
+    .model-tab {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      padding: 12px 8px;
+      border: 1.5px solid var(--surface2);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+
+    .model-tab input[type="radio"] {
+      display: none;
+    }
+
+    .model-tab .tab-label {
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .model-tab small {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .model-tab:has(input:checked) {
+      border-color: var(--primary);
+      background: rgba(0, 122, 255, 0.12);
+    }
+
+    .model-tab:has(input:checked) .tab-label {
+      color: var(--primary);
+    }
+
+    .status-msg {
+      text-align: center;
+      font-size: 14px;
+      min-height: 20px;
+    }
+
+    .status-msg.ok { color: var(--success); }
+    .status-msg.err { color: var(--danger); }
+
+    /* ============================================
+       鍔ㄧ敾
+       ============================================ */
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes breathe {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.06); }
+    }
+
+    @keyframes dotPulse {
+      0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
+      40% { transform: scale(1); opacity: 1; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 鍚姩椤?-->
+  <div id="splash">
+    <div class="splash-content">
+      <div class="splash-icon">馃摳</div>
+      <h1>Vision AI</h1>
+      <p>鎽勫儚澶村疄鏃剁敾闈?路 AI 鏅鸿兘瀵硅瘽</p>
+      <div class="splash-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 涓荤晫闈?-->
+  <div id="app">
+    <!-- 鎽勫儚澶?-->
+    <div class="camera-wrap">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="canvas"></canvas>
+
+      <div class="camera-header">
+        <button class="top-btn" id="settingsBtn" title="璁剧疆">鈿欙笍</button>
+        <span class="cam-status" id="camStatus">鈴?鍚姩涓€?/span>
+        <button class="top-btn" id="switchBtn" title="鍒囨崲鎽勫儚澶?>馃攧</button>
+      </div>
+
+      <div class="camera-hint" id="hint">鎸囧悜浠绘剰鍦烘櫙锛屽紑鍙ｅ氨闂?/div>
+    </div>
+
+    <!-- 瀵硅瘽 -->
+    <div class="chat-area">
+      <div class="chat-header">
+        <span>馃挰 瀵硅瘽</span>
+        <button class="clear-btn" id="clearBtn">娓呯┖</button>
+      </div>
+
+      <div class="messages" id="messages"></div>
+
+      <div class="input-bar">
+        <input
+          type="text"
+          id="questionInput"
+          placeholder="杈撳叆闂锛屾垨鎸?馃帳 璇磋瘽鈥?
+          autocomplete="off"
+          autocorrect="off"
+          autocapitalize="off"
+        />
+        <button class="icon-btn mic-btn" id="micBtn" title="鎸変綇璇磋瘽">馃帳</button>
+        <button class="icon-btn send-btn" id="sendBtn" title="鍙戦€?>鉃?/button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 璁剧疆椤甸潰 -->
+  <div id="settingsPage">
+    <div class="settings-header">
+      <button class="top-btn" id="closeSettingsBtn" title="鍏抽棴">鉁?/button>
+      <h2>鈿欙笍 璁剧疆</h2>
+    </div>
+    <div class="settings-body">
+      <div class="field">
+        <label>馃 AI 妯″瀷</label>
+        <div class="model-tabs">
+          <label class="model-tab">
+            <input type="radio" name="modelType" value="gemini-2.5-flash" id="modelGemini" />
+            <span class="tab-label">馃摳 Gemini锛堣瑙夛級</span>
+            <small>鏀寔鎽勫儚澶磋瘑鍒?/small>
+          </label>
+          <label class="model-tab">
+            <input type="radio" name="modelType" value="deepseek-chat" id="modelDeepseek" />
+            <span class="tab-label">馃挰 DeepSeek锛堟枃瀛楋級</span>
+            <small>绾枃瀛楀璇?/small>
+          </label>
+        </div>
+      </div>
+      <div class="field" id="deepseekKeyField">
+        <label>馃攽 DeepSeek API Key</label>
+        <input
+          type="password"
+          id="apiKeyInput"
+          placeholder="sk-xxxxxxxxxxxxxxxxxxxxxxxx"
+          autocomplete="off"
+        />
+        <small>
+          鍦?<a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com</a>
+          鑾峰彇锛堝厤璐规敞鍐岋級
+        </small>
+      </div>
+      <div class="field hidden" id="geminiKeyField">
+        <label>馃攽 Gemini API Key</label>
+        <input
+          type="password"
+          id="geminiKeyInput"
+          placeholder="AIza..."
+          autocomplete="off"
+        />
+        <small>
+          鍦?<a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com</a>
+          鑾峰彇锛堝厤璐归搴﹀鐢級
+        </small>
+      </div>
+      <div class="field">
+        <label>馃摲 榛樿鎽勫儚澶?/label>
+        <select id="cameraSelect">
+          <option value="environment">鍚庣疆鎽勫儚澶?/option>
+          <option value="user">鍓嶇疆鎽勫儚澶?/option>
+        </select>
+      </div>
+      <button class="save-btn" id="saveBtn">淇濆瓨骞惰繛鎺?/button>
+      <div class="status-msg" id="statusMsg"></div>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================
+       Vision AI - 涓荤▼搴?       ============================================ */
+
+    // ---- 鐘舵€?----
+    let stream = null;
+    let facing = 'environment';
+    let sessionId = 's_' + Date.now();
+    let isRecording = false;
+    let isProcessing = false;
+    let recognition = null;
+    let serverUrl = '';  // 鐢卞悗绔憡鐭?
+    // ---- DOM ----
+    const splash    = document.getElementById('splash');
+    const app       = document.getElementById('app');
+    const video      = document.getElementById('video');
+    const canvas     = document.getElementById('canvas');
+    const ctx        = canvas.getContext('2d');
+    const messages   = document.getElementById('messages');
+    const qInput     = document.getElementById('questionInput');
+    const micBtn     = document.getElementById('micBtn');
+    const sendBtn    = document.getElementById('sendBtn');
+    const camStatus  = document.getElementById('camStatus');
+    const hint       = document.getElementById('hint');
+    const clearBtn   = document.getElementById('clearBtn');
+    const settingsBtn= document.getElementById('settingsBtn');
+    const switchBtn  = document.getElementById('switchBtn');
+    const settingsPage = document.getElementById('settingsPage');
+    const closeSettingsBtn = document.getElementById('closeSettingsBtn');
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    const geminiKeyInput = document.getElementById('geminiKeyInput');
+    const modelGemini = document.getElementById('modelGemini');
+    const modelDeepseek = document.getElementById('modelDeepseek');
+    const deepseekKeyField = document.getElementById('deepseekKeyField');
+    const geminiKeyField = document.getElementById('geminiKeyField');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const saveBtn    = document.getElementById('saveBtn');
+    const statusMsg  = document.getElementById('statusMsg');
+    let currentModel = 'gemini-2.5-flash';
+
+    // ============================================
+    // 鎽勫儚澶?    // ============================================
+    async function initCamera() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+      }
+
+      camStatus.textContent = '鈴?鍚姩鎽勫儚澶粹€?;
+      camStatus.className = 'cam-status';
+
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: facing,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+          audio: false,
+        });
+        video.srcObject = stream;
+        await video.play();
+        camStatus.textContent = '鈼?瀹炴椂';
+        camStatus.className = 'cam-status live';
+      } catch (err) {
+        console.error('鎽勫儚澶撮敊璇?', err);
+        camStatus.textContent = '鉁?鎽勫儚澶村嚭閿?;
+        camStatus.className = 'cam-status error';
+        addMsg('system', '鈿狅笍 鎽勫儚澶存棤娉曡闂紝璇峰湪璁剧疆涓厑璁哥浉鏈烘潈闄?);
+      }
+    }
+
+    // ============================================
+    // 鎴浘
+    // ============================================
+    function captureFrame() {
+      if (!video || !video.videoWidth) return null;
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+      return canvas.toDataURL('image/jpeg', 0.65)
+                  .replace(/^data:image\/\w+;base64,/, '');
+    }
+
+    // ============================================
+    // 娑堟伅
+    // ============================================
+    function addMsg(role, text) {
+      const el = document.createElement('div');
+      el.className = 'message ' + role;
+      el.textContent = text;
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+      return el;
+    }
+
+    function addThinking() {
+      const el = document.createElement('div');
+      el.className = 'thinking';
+      el.innerHTML = '<span></span><span></span><span></span>';
+      messages.appendChild(el);
+      messages.scrollTop = messages.scrollHeight;
+      return el;
+    }
+
+    function clearChat() {
+      messages.innerHTML = '';
+      fetch(serverUrl + '/api/clear', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId }),
+      }).catch(() => {});
+    }
+
+    // ============================================
+    // 鍙戦€?    // ============================================
+    async function send(question) {
+      if (isProcessing || !question.trim()) return;
+      isProcessing = true;
+      sendBtn.style.opacity = '0.4';
+
+      const q = question.trim();
+      addMsg('user', q);
+      const thinking = addThinking();
+
+      try {
+        const imageBase64 = captureFrame();
+
+        const resp = await fetch(serverUrl + '/api/ask', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId, question: q, imageBase64, model: currentModel }),
+        });
+
+        const data = await resp.json();
+
+        thinking.remove();
+
+        if (data.error) {
+          addMsg('error', '鉂?' + data.error);
+          if (data.error.includes('API Key')) {
+            setTimeout(() => openSettings(), 1500);
+          }
+        } else {
+          addMsg('ai', data.answer);
+        }
+      } catch (err) {
+        thinking.remove();
+        addMsg('error', '鉂?缃戠粶杩炴帴澶辫触锛岃妫€鏌ョ綉缁?);
+      } finally {
+        isProcessing = false;
+        sendBtn.style.opacity = '1';
+        qInput.value = '';
+        qInput.focus();
+      }
+    }
+
+    // ============================================
+    // 璇煶璇嗗埆
+    // ============================================
+    function initSpeech() {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) {
+        micBtn.style.display = 'none';
+        return;
+      }
+
+      recognition = new SR();
+      recognition.lang = 'zh-CN';
+      recognition.continuous = false;
+      recognition.interimResults = false;
+
+      recognition.onstart = () => {
+        isRecording = true;
+        micBtn.classList.add('recording');
+        camStatus.textContent = '馃帳 鑱嗗惉涓€?;
+        camStatus.className = 'cam-status live';
+      };
+
+      recognition.onresult = (event) => {
+        const text = event.results[0][0].transcript;
+        qInput.value = text;
+        send(text);
+      };
+
+      recognition.onend = () => {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        camStatus.textContent = '鈼?瀹炴椂';
+        camStatus.className = 'cam-status live';
+      };
+
+      recognition.onerror = (event) => {
+        isRecording = false;
+        micBtn.classList.remove('recording');
+        if (event.error !== 'no-speech') {
+          camStatus.textContent = '馃帳 璇煶鍑洪敊';
+          camStatus.className = 'cam-status error';
+        } else {
+          camStatus.textContent = '鈼?瀹炴椂';
+          camStatus.className = 'cam-status live';
+        }
+      };
+    }
+
+    // ============================================
+    // 璁剧疆
+    // ============================================
+    function openSettings() {
+      settingsPage.classList.add('show');
+    }
+
+    function closeSettings() {
+      settingsPage.classList.remove('show');
+    }
+
+    async function saveSettings() {
+      const selectedModel = document.querySelector('input[name="modelType"]:checked')?.value || 'gemini-2.5-flash';
+      const deepseekKey = apiKeyInput.value.trim();
+      const geminiKey = geminiKeyInput.value.trim();
+      const camera = cameraSelect.value;
+
+      // 楠岃瘉
+      if (selectedModel === 'deepseek-chat' && !deepseekKey) {
+        statusMsg.textContent = '鈿狅笍 璇峰～鍐?DeepSeek API Key';
+        statusMsg.className = 'status-msg err';
+        return;
+      }
+      if (selectedModel === 'gemini-2.5-flash' && !geminiKey) {
+        statusMsg.textContent = '鈿狅笍 璇峰～鍐?Gemini API Key';
+        statusMsg.className = 'status-msg err';
+        return;
+      }
+
+      saveBtn.disabled = true;
+      saveBtn.textContent = '姝ｅ湪娴嬭瘯鈥?;
+      statusMsg.textContent = '';
+      statusMsg.className = 'status-msg';
+
+      try {
+        // 娴嬭瘯 API Key
+        const testResp = await fetch(serverUrl + '/api/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: deepseekKey,
+            geminiKey: geminiKey,
+            model: selectedModel,
+          }),
+        });
+
+        const testData = await testResp.json();
+
+        if (!testResp.ok) {
+          statusMsg.textContent = '鉂?' + (testData.error || 'API Key 鏃犳晥');
+          statusMsg.className = 'status-msg err';
+          saveBtn.disabled = false;
+          saveBtn.textContent = '淇濆瓨骞惰繛鎺?;
+          return;
+        }
+
+        // 淇濆瓨璁剧疆
+        await fetch(serverUrl + '/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            apiKey: deepseekKey,
+            geminiKey: geminiKey,
+            model: selectedModel,
+          }),
+        });
+
+        currentModel = selectedModel;
+        localStorage.setItem('va_camera', camera);
+        facing = camera;
+        cameraSelect.value = camera;
+
+        statusMsg.textContent = '鉁?' + (selectedModel === 'gemini-2.5-flash' ? 'Gemini' : 'DeepSeek') + ' 杩炴帴鎴愬姛锛?;
+        statusMsg.className = 'status-msg ok';
+        saveBtn.textContent = '鉁?宸蹭繚瀛?;
+
+        setTimeout(() => {
+          closeSettings();
+          initCamera();
+          saveBtn.disabled = false;
+          saveBtn.textContent = '淇濆瓨骞惰繛鎺?;
+        }, 1200);
+
+      } catch (err) {
+        statusMsg.textContent = '鉂?缃戠粶閿欒锛岃妫€鏌ョ綉缁滆繛鎺?;
+        statusMsg.className = 'status-msg err';
+        saveBtn.disabled = false;
+        saveBtn.textContent = '淇濆瓨骞惰繛鎺?;
+      }
+    }
+
+    // ============================================
+    // 鍒濆鍖?    // ============================================
+    async function init() {
+      // 鍚姩椤?      setTimeout(() => {
+        splash.classList.add('fade-out');
+        setTimeout(() => {
+          splash.style.display = 'none';
+          app.classList.add('active');
+        }, 600);
+      }, 1800);
+
+      // 妫€娴嬫湇鍔″櫒
+      try {
+        const resp = await fetch('/api/info');
+        const data = await resp.json();
+        serverUrl = `http://${data.ip}:${data.port}`;
+      } catch {
+        serverUrl = window.location.origin;
+      }
+
+      // 鍔犺浇璁剧疆
+      function applyModelTabs(model) {
+        if (model === 'gemini-2.5-flash') {
+          modelGemini.checked = true;
+          deepseekKeyField.classList.add('hidden');
+          geminiKeyField.classList.remove('hidden');
+        } else {
+          modelDeepseek.checked = true;
+          deepseekKeyField.classList.remove('hidden');
+          geminiKeyField.classList.add('hidden');
+        }
+        currentModel = model;
+      }
+
+      // 妯″瀷鍒囨崲 鈫?鏄剧ず瀵瑰簲 Key 杈撳叆妗?      modelGemini.addEventListener('change', () => applyModelTabs('gemini-2.5-flash'));
+      modelDeepseek.addEventListener('change', () => applyModelTabs('deepseek-chat'));
+
+      // 鍔犺浇璁剧疆
+      try {
+        const resp = await fetch(serverUrl + '/api/settings');
+        const data = await resp.json();
+        if (data.hasDeepseekKey || data.hasGeminiKey) {
+          const model = data.model || 'gemini-2.5-flash';
+          applyModelTabs(model);
+          addMsg('system', '鉁?宸查厤缃?' + (model === 'gemini-2.5-flash' ? 'Gemini' : 'DeepSeek') + '锛屽彲浠ュ紑濮嬩娇鐢ㄤ簡');
+        } else {
+          applyModelTabs('gemini-2.5-flash');
+          setTimeout(openSettings, 2200);
+        }
+      } catch {
+        applyModelTabs('gemini-2.5-flash');
+        setTimeout(openSettings, 2200);
+      }
+
+      // 鍔犺浇鎽勫儚澶村亸濂?      const savedCamera = localStorage.getItem('va_camera');
+      if (savedCamera) {
+        facing = savedCamera;
+        cameraSelect.value = savedCamera;
+      }
+
+      initSpeech();
+      await initCamera();
+
+      // 璁剧疆椤甸潰浜嬩欢
+      settingsBtn.addEventListener('click', openSettings);
+      closeSettingsBtn.addEventListener('click', closeSettings);
+      saveBtn.addEventListener('click', saveSettings);
+
+      // 鍒囨崲鎽勫儚澶?      switchBtn.addEventListener('click', async () => {
+        facing = facing === 'environment' ? 'user' : 'environment';
+        localStorage.setItem('va_camera', facing);
+        cameraSelect.value = facing;
+        await initCamera();
+      });
+
+      // 娓呯┖
+      clearBtn.addEventListener('click', clearChat);
+
+      // 鍙戦€?      sendBtn.addEventListener('click', () => send(qInput.value));
+      qInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          send(qInput.value);
+        }
+      });
+
+      // 楹﹀厠椋?      micBtn.addEventListener('click', () => {
+        if (recognition && !isRecording) {
+          try { recognition.start(); } catch (e) {}
+        }
+      });
+
+      // 闀挎寜璇磋瘽锛堢Щ鍔ㄧ锛?      let pressTimer;
+      micBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        pressTimer = setTimeout(() => {
+          if (recognition) {
+            try { recognition.start(); } catch (err) {}
+          }
+        }, 250);
+      });
+
+      micBtn.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+        if (isRecording && recognition) {
+          recognition.stop();
+        }
+      });
+    }
+
+    // 绛夊緟 DOM 鍔犺浇
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>
+

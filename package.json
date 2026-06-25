@@ -1,0 +1,12 @@
+{
+  "name": "vision-ai-chat",
+  "version": "1.0.0",
+  "description": "Vision AI - Real-time camera AI chat with DeepSeek and Gemini",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
